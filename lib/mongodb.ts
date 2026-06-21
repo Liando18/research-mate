@@ -9,7 +9,7 @@ function buildUri(raw: string): string {
   ];
   const atIdx = raw.indexOf('@');
   const qIdx = raw.indexOf('?');
-  const creds = raw.slice(11, atIdx);
+  const creds = raw.slice(14, atIdx);
   const query = qIdx !== -1 ? raw.slice(qIdx + 1) : '';
   const params = new URLSearchParams(query);
   if (!params.has('ssl')) params.set('ssl', 'true');
