@@ -1,12 +1,27 @@
 import { MongoClient } from 'mongodb';
 
-const hosts = [
-  'ac-yhglrs0-shard-00-00.9lgoisg.mongodb.net:27017',
-  'ac-yhglrs0-shard-00-01.9lgoisg.mongodb.net:27017',
-  'ac-yhglrs0-shard-00-02.9lgoisg.mongodb.net:27017',
-];
+function buildUri(raw: string): string {
+  if (!raw.startsWith('mongodb+srv://')) return raw;
+  const hosts = [
+    'ac-yhglrs0-shard-00-00.9lgoisg.mongodb.net:27017',
+    'ac-yhglrs0-shard-00-01.9lgoisg.mongodb.net:27017',
+    'ac-yhglrs0-shard-00-02.9lgoisg.mongodb.net:27017',
+  ];
+  const atIdx = raw.indexOf('@');
+  const qIdx = raw.indexOf('?');
+  const creds = raw.slice(11, atIdx);
+  const query = qIdx !== -1 ? raw.slice(qIdx + 1) : '';
+  const params = new URLSearchParams(query);
+  if (!params.has('ssl')) params.set('ssl', 'true');
+  if (!params.has('replicaSet')) params.set('replicaSet', 'atlas-11gr8t-shard-0');
+  if (!params.has('authSource')) params.set('authSource', 'admin');
+  params.set('retryWrites', 'true');
+  return `mongodb://${creds}@${hosts.join(',')}/research-gate?${params.toString()}`;
+}
 
-const directUri = `mongodb://liando1801_db_user:YdzxjpXvhUhHGAlO@${hosts.join(',')}/research-gate?ssl=true&replicaSet=atlas-11gr8t-shard-0&authSource=admin&retryWrites=true&w=majority`;
+const rawUri = process.env.MONGODB_URI || '';
+const isDev = process.env.NODE_ENV === 'development';
+const uri = isDev && rawUri ? buildUri(rawUri) : rawUri;
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
@@ -17,12 +32,12 @@ declare global {
 
 if (process.env.NODE_ENV === 'development') {
   if (!global._mongoClientPromise) {
-    client = new MongoClient(directUri, { serverSelectionTimeoutMS: 15000 });
+    client = new MongoClient(uri, { serverSelectionTimeoutMS: 15000 });
     global._mongoClientPromise = client.connect();
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  client = new MongoClient(directUri, { serverSelectionTimeoutMS: 15000 });
+  client = new MongoClient(uri, { serverSelectionTimeoutMS: 15000 });
   clientPromise = client.connect();
 }
 
